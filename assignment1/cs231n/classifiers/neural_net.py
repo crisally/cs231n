@@ -1,10 +1,6 @@
 from __future__ import print_function
-
-from builtins import range
-from builtins import object
 import numpy as np
-import matplotlib.pyplot as plt
-from past.builtins import xrange
+
 
 class TwoLayerNet(object):
     """
@@ -80,11 +76,20 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # compute the scores:
+        # X = [N x D]
+        # W1 = [D x H]
+        # fc1 = [N x H]
+        # W2 = [H * C]
+
+        fc1 = X.dot(W1) + b1  # [N x H]
+        fc1 *= (fc1 > 0)  # [N x H]
+        scores = fc1.dot(W2) + b2  # [N x C]
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # If the targets are not given then jump out, we're done
+        # For predicting:
         if y is None:
             return scores
 
@@ -98,7 +103,14 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        softmax_matrix = np.exp(scores - np.max(scores))  # avoid warnings
+        softmax_matrix /= np.sum(softmax_matrix, axis=1).reshape(N, 1)  # [N x C]
+
+        # compute the loss:
+        loss = np.sum(-np.log(softmax_matrix[np.arange(N), y] / \
+                              np.sum(softmax_matrix, axis=1)))  # float
+        loss /= N  # float
+        loss += reg * np.sum((W1 ** 2).sum() + (W2 ** 2).sum())  # float
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -111,7 +123,25 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        softmax_matrix[np.arange(N), y] -= 1
+
+        dW2 = fc1.T.dot(softmax_matrix)  # [H x C]
+        dW2 /= N
+        dW2 += reg * 2 * W2
+
+        db2 = np.sum(softmax_matrix, axis=0)  # [1 x C]
+        db2 /= N
+
+        dW1 = softmax_matrix.dot(W2.T)  # [N x H]
+        dfc1 = dW1 * (fc1 > 0)  # [N x H]
+        dW1 = X.T.dot(dfc1)  # [D x H]
+        dW1 /= N  # [D x H]
+        dW1 += reg * 2 * W1  # [D x H]
+
+        db1 = dfc1.sum(axis=0)  # [1 x H]
+        db1 /= N
+
+        grads = {'W1': dW1, 'b1': db1, 'W2': dW2, 'b2': db2}
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -156,7 +186,10 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            batch_indices = np.random.choice(num_train, batch_size)
+
+            X_batch = X[batch_indices]
+            y_batch = y[batch_indices]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -172,7 +205,11 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            self.params['W1'] -= learning_rate * grads['W1']
+            self.params['b1'] -= learning_rate * grads['b1']
+
+            self.params['W2'] -= learning_rate * grads['W2']
+            self.params['b2'] -= learning_rate * grads['b2']
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -191,9 +228,9 @@ class TwoLayerNet(object):
                 learning_rate *= learning_rate_decay
 
         return {
-          'loss_history': loss_history,
-          'train_acc_history': train_acc_history,
-          'val_acc_history': val_acc_history,
+            'loss_history': loss_history,
+            'train_acc_history': train_acc_history,
+            'val_acc_history': val_acc_history,
         }
 
     def predict(self, X):
@@ -218,7 +255,7 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        y_pred = np.argmax(self.loss(X), axis=1)  # argmax returns an index with max value, i.e label
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
