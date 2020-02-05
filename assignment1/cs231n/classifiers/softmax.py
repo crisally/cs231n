@@ -1,7 +1,5 @@
-from builtins import range
 import numpy as np
-from random import shuffle
-from past.builtins import xrange
+
 
 def softmax_loss_naive(W, X, y, reg):
     """
@@ -33,7 +31,25 @@ def softmax_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    num_train = X.shape[0]
+    num_classes = W.shape[1]
+
+    for i in range(num_train):
+        score_vector = X[i].dot(W)
+        score_vector -= np.max(score_vector)
+        softmax_vector = np.exp(score_vector) / np.sum(np.exp(score_vector))
+        loss += -np.log(softmax_vector[y[i]])
+        for j in range(num_classes):
+            if j == y[i]:
+                dW[:, y[i]] += X[i] * (softmax_vector[j] - 1)
+            else:
+                dW[:, j] += X[i] * softmax_vector[j]
+
+    loss /= num_train
+    loss += np.sum(reg * (W ** 2))
+
+    dW /= num_train
+    dW += 2 * reg * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -50,6 +66,9 @@ def softmax_loss_vectorized(W, X, y, reg):
     loss = 0.0
     dW = np.zeros_like(W)
 
+    num_train = X.shape[0]
+    num_classes = W.shape[1]
+
     #############################################################################
     # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
     # Store the loss in loss and the gradient in dW. If you are not careful     #
@@ -58,8 +77,20 @@ def softmax_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    scores = X.dot(W)  # Посчитал скоры
+    scores -= np.max(scores, axis=1).reshape(num_train, 1)
 
+    softmax = np.exp(scores) / np.sum(np.exp(scores), axis=1).reshape(num_train, 1)
+
+    loss = np.sum(-np.log(softmax[np.arange(num_train), y]))
+    loss /= num_train
+    loss += np.sum(reg * (W ** 2))
+
+    softmax[np.arange(num_train), y] -= 1
+    dW = np.dot(X.T, softmax)
+
+    dW /= num_train
+    dW += 2 * reg * W
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
