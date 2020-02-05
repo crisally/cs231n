@@ -1,20 +1,13 @@
-from builtins import range
-from builtins import object
-import numpy as np
-
-from cs231n.layers import *
-from cs231n.rnn_layers import *
+from assignment3.cs231n.rnn_layers import *
 
 
 class CaptioningRNN(object):
     """
     A CaptioningRNN produces captions from image features using a recurrent
     neural network.
-
     The RNN receives input vectors of size D, has a vocab size of V, works on
     sequences of length T, has an RNN hidden dimension of H, uses word vectors
     of dimension W, and operates on minibatches of size N.
-
     Note that we don't use any regularization for the CaptioningRNN.
     """
 
@@ -22,7 +15,6 @@ class CaptioningRNN(object):
                  hidden_dim=128, cell_type='rnn', dtype=np.float32):
         """
         Construct a new CaptioningRNN instance.
-
         Inputs:
         - word_to_idx: A dictionary giving the vocabulary. It contains V entries,
           and maps each string to a unique integer in the range [0, V).
@@ -74,18 +66,15 @@ class CaptioningRNN(object):
         for k, v in self.params.items():
             self.params[k] = v.astype(self.dtype)
 
-
     def loss(self, features, captions):
         """
         Compute training-time loss for the RNN. We input image features and
         ground-truth captions for those images, and use an RNN (or LSTM) to compute
         loss and gradients on all parameters.
-
         Inputs:
         - features: Input image features, of shape (N, D)
         - captions: Ground-truth captions; an integer array of shape (N, T) where
           each element is in the range 0 <= y[i, t] < V
-
         Returns a tuple of:
         - loss: Scalar loss
         - grads: Dictionary of gradients parallel to self.params
@@ -140,37 +129,51 @@ class CaptioningRNN(object):
         # Note also that you are allowed to make use of functions from layers.py   #
         # in your implementation, if needed.                                       #
         ############################################################################
-        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h0 = features.dot(W_proj) + b_proj  # [N,D] x [D,H] + [H,]
+        x, cache_we = word_embedding_forward(captions_in, W_embed)  # [N,T,V]
+        h, cache_h = rnn_forward(x, h0, Wx, Wh, b)  # [N,T,H]
+        scores, cache_s = temporal_affine_forward(h, W_vocab, b_vocab)  # [N,T,V]
 
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        loss, dout = temporal_softmax_loss(scores, captions_out, mask)  # dout to scores
+        dout, dw_vocab, db_vocab = temporal_affine_backward(dout, cache_s)
+        dx, dh0, dWx, dWh, db = rnn_backward(dout, cache_h)
+        # d to proj:
+        dw_proj = features.T.dot(dh0)
+        db_proj = dh0.sum(axis=0)
+        #
+        dw_embed = word_embedding_backward(dx, cache_we)
+
+        grads = {'W_embed': dw_embed,
+                 'W_proj': W_proj,
+                 'b_proj': db_proj,
+                 'Wx': dWx,
+                 'Wh': dWh,
+                 'b': db,
+                 'W_vocab': dw_vocab,
+                 'b_vocab': db_vocab}
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads
 
-
     def sample(self, features, max_length=30):
         """
         Run a test-time forward pass for the model, sampling captions for input
         feature vectors.
-
         At each timestep, we embed the current word, pass it and the previous hidden
         state to the RNN to get the next hidden state, use the hidden state to get
         scores for all vocab words, and choose the word with the highest score as
         the next word. The initial hidden state is computed by applying an affine
         transform to the input image features, and the initial word is the <START>
         token.
-
         For LSTMs you will also have to keep track of the cell state; in that case
         the initial cell state should be zero.
-
         Inputs:
         - features: Array of input image features of shape (N, D).
         - max_length: Maximum length T of generated captions.
-
         Returns:
         - captions: Array of shape (N, max_length) giving sampled captions,
           where each element is an integer in the range [0, V). The first element
@@ -209,11 +212,17 @@ class CaptioningRNN(object):
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        captions[:, 0] = self._start
 
-        pass
+        x, _ = word_embedding_forward(captions[:, 0], W_embed)
+        h_prev = features.dot(W_proj) + b_proj
 
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        for i in range(max_length):
+            h_prev, _ = rnn_step_forward(x, h_prev, Wx, Wh, b)
+            scores = h_prev.dot(W_vocab) + b_vocab
+            captions[:, i] = scores.argmax(axis=1)
+            x, _ = word_embedding_forward(captions[:, i], W_embed)
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
