@@ -1,5 +1,4 @@
 from __future__ import print_function, division
-from builtins import range
 import numpy as np
 
 
@@ -36,7 +35,8 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    next_h = np.tanh(x.dot(Wx) + prev_h.dot(Wh) + b)
+    cache = (x, prev_h, Wx, Wh, b, next_h)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -69,7 +69,15 @@ def rnn_step_backward(dnext_h, cache):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, prev_h, Wx, Wh, b, next_h = cache
+    dtan = np.cosh(np.arctanh(next_h)) ** -2
+    dout = dnext_h * dtan
+
+    dWx = x.T.dot(dout)
+    dWh = prev_h.T.dot(dout)
+    dx = dout.dot(Wx.T)
+    dprev_h = dout.dot(Wh.T)
+    db = dout.sum(axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -104,7 +112,17 @@ def rnn_forward(x, h0, Wx, Wh, b):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, T, D = x.shape
+    N, H = h0.shape
+
+    h = np.zeros((N, T, H))
+    cache = []
+
+    prev_h = h0
+    for t in range(T):
+        prev_h, cache_h = rnn_step_forward(x[:, t, :], prev_h, Wx, Wh, b)
+        h[:, t, :] = prev_h
+        cache.append(cache_h)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -140,7 +158,22 @@ def rnn_backward(dh, cache):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, T, H = dh.shape
+    N, D = cache[0][0].shape  # x.shape
+    dx = np.zeros((N, T, D))
+
+    for i, t in enumerate(reversed(range(T))):
+        if not i:
+            dx_, dprev_h, dWx, dWh, db = rnn_step_backward(dh[:, t, :], cache[t])
+            dx[:, t, :] += dx_
+            continue
+        dx_, dprev_h, dWx_, dWh_, db_ = rnn_step_backward(dh[:, t, :] + dprev_h, cache[t])
+
+        dx[:, t, :] += dx_
+        dWx += dWx_
+        dWh += dWh_
+        db += db_
+    dh0 = dprev_h
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -172,7 +205,8 @@ def word_embedding_forward(x, W):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = W[x]
+    cache = (x, W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -205,7 +239,9 @@ def word_embedding_backward(dout, cache):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, W = cache
+    dW = np.zeros(W.shape)
+    np.add.at(dW, x, dout)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -257,7 +293,13 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    a = x.dot(Wx) + prev_h.dot(Wh) + b
+    # input_gate,  forget_gate, output_gate, candidate:
+    gates = np.split(a, 4, axis=1)  # [4,N,H] instead of [N, 4*H]
+    i, f, o, c = (sigmoid(gate) if i < 3 else np.tanh(gate) for i, gate in enumerate(gates))
+    next_c = f * prev_c + i * c
+    next_h = o * np.tanh(next_c)
+    cache = x, prev_h, prev_c, Wx, Wh, b, a, next_h, next_c
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
