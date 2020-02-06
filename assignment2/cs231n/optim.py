@@ -66,8 +66,11 @@ def sgd_momentum(w, dw, config=None):
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    momentum = config.get('momentum')
+    lr = config.get('learning_rate')
 
-    pass
+    v = momentum * v - lr * dw  # matrix of velocity
+    next_w = w + v  # update the weight matrix
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -76,7 +79,6 @@ def sgd_momentum(w, dw, config=None):
     config['velocity'] = v
 
     return next_w, config
-
 
 
 def rmsprop(w, dw, config=None):
@@ -105,7 +107,15 @@ def rmsprop(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    lr = config.get('learning_rate')
+    dr = config.get('decay_rate')
+    epsilon = config.get('epsilon')
+    G = config.get('cache')
+
+    G = dr * G + (1 - dr) * (dw ** 2)
+    next_w = w - ((lr * dw) / (np.sqrt(G) + epsilon))
+
+    config['cache'] = G
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -130,13 +140,13 @@ def adam(w, dw, config=None):
     - t: Iteration number.
     """
     if config is None: config = {}
-    config.setdefault('learning_rate', 1e-3)
-    config.setdefault('beta1', 0.9)
-    config.setdefault('beta2', 0.999)
-    config.setdefault('epsilon', 1e-8)
-    config.setdefault('m', np.zeros_like(w))
-    config.setdefault('v', np.zeros_like(w))
-    config.setdefault('t', 0)
+    learning_rate = config.setdefault('learning_rate', 1e-3)
+    beta1 = config.setdefault('beta1', 0.9)
+    beta2 = config.setdefault('beta2', 0.999)
+    eps = config.setdefault('epsilon', 1e-8)
+    m = config.setdefault('m', np.zeros_like(w))
+    v = config.setdefault('v', np.zeros_like(w))
+    t = config.setdefault('t', 1)
 
     next_w = None
     ###########################################################################
