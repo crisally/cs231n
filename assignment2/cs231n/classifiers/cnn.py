@@ -1,6 +1,3 @@
-from builtins import object
-import numpy as np
-
 from assignment2.cs231n.layers import *
 from assignment2.cs231n.fast_layers import *
 from assignment2.cs231n.layer_utils import *
