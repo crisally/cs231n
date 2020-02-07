@@ -1,7 +1,4 @@
-from builtins import range
-from builtins import object
 import numpy as np
-from past.builtins import xrange
 
 
 class KNearestNeighbor(object):
@@ -77,7 +74,8 @@ class KNearestNeighbor(object):
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-                pass
+                l2_distance = np.sqrt(np.sum(np.square(self.X_train[j] - X[i])))
+                dists[i][j] = l2_distance
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -101,7 +99,8 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            l2_distance = np.sqrt(np.sum(np.square(self.X_train - X[i]), axis=1))
+            dists[i] = l2_distance
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -131,7 +130,9 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dists = np.sqrt(-2 * np.dot(X, self.X_train.T) + \
+                        np.sum(X ** 2, axis=1)[:, np.newaxis] + \
+                        np.sum(self.X_train ** 2, axis=1))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -151,6 +152,7 @@ class KNearestNeighbor(object):
         """
         num_test = dists.shape[0]
         y_pred = np.zeros(num_test)
+
         for i in range(num_test):
             # A list of length k storing the labels of the k nearest neighbors to
             # the ith test point.
@@ -164,7 +166,7 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            sorted_dist = np.argsort(dists[i])
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
@@ -176,7 +178,19 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            list_closest_y = self.y_train[sorted_dist[:k]]
+            predicted_label = max(set(list(list_closest_y)), key=list(list_closest_y).count)
+            y_pred[i] = predicted_label
+
+            closest_y = self.y_train[np.argsort(dists[i])][0:k]
+            #########################################################################
+            # TODO:                                                                 #
+            # Now that you have found the labels of the k nearest neighbors, you    #
+            # need to find the most common label in the list closest_y of labels.   #
+            # Store this label in y_pred[i]. Break ties by choosing the smaller     #
+            # label.                                                                #
+            #########################################################################
+            y_pred[i] = np.bincount(closest_y).argmax()
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
